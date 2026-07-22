@@ -7,17 +7,17 @@ description: >-
 
 # Elirox Robot Runner Skill
 
-Reference for connecting a user's Elirox account and managing Elirox CFD trading robots via the `elirox-public-api` MCP server. The user is always in control: keep them informed, and confirm before anything that changes their account (see **Confirmation rule**).
+Reference for connecting a user's Elirox account and managing Elirox CFD trading robots via the `elirox-mcp` MCP server. The user is always in control: keep them informed, and confirm before anything that changes their account (see **Confirmation rule**).
 
 **Connecting, transparently:** Elirox has an official remote MCP endpoint `https://app.elxapi.com/public/v1/mcp`. To connect, you ask the user for *their own* Elirox API key and register that endpoint in their agent's MCP config, using the key to authenticate against Elirox's own API. Connecting only reads the account — it never trades. It's fine to pause for the user to confirm before registering.
 
-**Language:** reply in the user's language, detected from their natural-language words (ignore the `npx skills add …` command and URLs). E.g. in `npx skills add …, подключи Elirox` → Russian. Don't default to English just because the command is English. **Translate EVERYTHING you output into that language** — card labels (Balance, Available to robots, Limit, What I can do, Try this, permission names), summaries, notes, and the risk warning. All English text in this file is a template to translate, never to copy verbatim. Never mix languages in one message.
+**Language:** reply in the user's language, detected from their natural-language words (ignore the `npx skills add …` command and URLs). E.g. in `npx skills add …, connect Elirox` → Russian. Don't default to English just because the command is English. **Translate EVERYTHING you output into that language** — card labels (Balance, Available to robots, Limit, What I can do, Try this, permission names), summaries, notes, and the risk warning. All English text in this file is a template to translate, never to copy verbatim. Never mix languages in one message.
 
 ---
 
 ## Connecting
 
-Guide the user through this when they want to connect and the `elirox-public-api` tools aren't loaded yet.
+Guide the user through this when they want to connect and the `elirox-mcp` tools aren't loaded yet.
 
 **1 — Already connected?** Call `elirox_get_account`:
 - Real account data → already connected. Give a one-line greeting; run **Show capabilities** only if the user asks what you can do.
@@ -28,14 +28,14 @@ Guide the user through this when they want to connect and the `elirox-public-api
 **2 — Ask for the API key** (never register without one). Use **exactly** this path — do not paraphrase:
 
 > 👋 To connect your Elirox account I need your **API key**.
-> Open the **Elirox app** (mobile or web) → **Settings → Elirox Agent → Create API Key**, copy the key and paste it here.
+> Open the **Elirox app** (mobile or web) → **Settings → Elirox Agent → API keys**, create a key, copy it and paste it here.
 
-**3 — Register the MCP server.** Standard registration: the key is stored locally in the user's own config (user scope), sent only to Elirox. Offer project scope (`--scope project`) if they prefer. On a key change (step 1 auth error), first remove the stale server — Claude Code: `claude mcp remove elirox-public-api --scope user`; other envs: delete the existing entry. Detect the env and run the match (replace `KEY`):
+**3 — Register the MCP server.** Standard registration: the key is stored locally in the user's own config (user scope), sent only to Elirox. Offer project scope (`--scope project`) if they prefer. On a key change (step 1 auth error), first remove the stale server — Claude Code: `claude mcp remove elirox-mcp --scope user`; other envs: delete the existing entry. Detect the env and run the match (replace `KEY`):
 
-- **Claude Code**: `claude mcp add-json --scope user elirox-public-api '{"type":"stdio","command":"npx","args":["-y","mcp-remote","https://app.elxapi.com/public/v1/mcp","--header","Authorization: Bearer KEY"]}'`
-- **Codex** (`~/.codex/config.toml`): `[mcp_servers."elirox-public-api"]` / `command = "npx"` / `args = ["-y", "mcp-remote", "https://app.elxapi.com/public/v1/mcp", "--header", "Authorization: Bearer KEY"]`
-- **Cursor** (`~/.cursor/mcp.json`): `{"mcpServers":{"elirox-public-api":{"command":"npx","args":["-y","mcp-remote","https://app.elxapi.com/public/v1/mcp","--header","Authorization: Bearer KEY"]}}}`
-- **OpenCode** (`~/.config/opencode/config.json`): `{"mcp":{"servers":{"elirox-public-api":{"command":"npx","args":["-y","mcp-remote","https://app.elxapi.com/public/v1/mcp","--header","Authorization: Bearer KEY"]}}}}`
+- **Claude Code**: `claude mcp add-json --scope user elirox-mcp '{"type":"stdio","command":"npx","args":["-y","mcp-remote","https://app.elxapi.com/public/v1/mcp","--header","Authorization: Bearer KEY"]}'`
+- **Codex** (`~/.codex/config.toml`): `[mcp_servers."elirox-mcp"]` / `command = "npx"` / `args = ["-y", "mcp-remote", "https://app.elxapi.com/public/v1/mcp", "--header", "Authorization: Bearer KEY"]`
+- **Cursor** (`~/.cursor/mcp.json`): `{"mcpServers":{"elirox-mcp":{"command":"npx","args":["-y","mcp-remote","https://app.elxapi.com/public/v1/mcp","--header","Authorization: Bearer KEY"]}}}`
+- **OpenCode** (`~/.config/opencode/config.json`): `{"mcp":{"servers":{"elirox-mcp":{"command":"npx","args":["-y","mcp-remote","https://app.elxapi.com/public/v1/mcp","--header","Authorization: Bearer KEY"]}}}}`
 
 **4 — Show the account without a restart.** Don't ask the user to restart. Call the API directly with the key via this script (mcp-remote uses newline-delimited JSON), parse the output, then go to **Show capabilities**. If `account.error === 'no_read_permission'` → **Privacy mode**.
 
@@ -148,7 +148,7 @@ If already on **Pro**, say it's the top plan and they can contact Elirox support
 
 **Read:** `elirox_get_account`, `elirox_get_active_bots`, `elirox_get_limits`, `elirox_get_assets`, `elirox_get_last_price`, `elirox_get_opened_orders`, `elirox_get_pending_orders`, `elirox_get_tradingview_webhook`.
 
-**State-changing (all require confirmation):** `elirox_launch_dca_bot`, `elirox_launch_grid_bot`, `elirox_launch_tradingview_bot`, `elirox_stop_bot`, `elirox_create_order`, `elirox_close_order` (`orderId`), `elirox_cancel_order` (`orderId`). There is no "modify order" tool — edit via the primitives (see **Opening / closing a trade**).
+**State-changing (all require confirmation):** `elirox_launch_dca_bot`, `elirox_launch_grid_bot`, `elirox_launch_tradingview_bot`, `elirox_stop_bot`, `elirox_create_order`, `elirox_close_order` (`orderId`), `elirox_cancel_order` (`orderId`), `elirox_modify_order` (`orderId` + at least one of `takeProfitPrice` / `stopLossPrice` / `limitPrice`). Use `elirox_modify_order` to change SL/TP on an open position or re-issue a pending order's price — `limitPrice` is pending-orders-only (see **Opening / closing a trade**).
 
 **Symbols:** map an informal name to a broker id via `elirox_get_assets`. Never invent an id; if the match is ambiguous, list the colliding ids and ask. Use an exact id the user already gave without re-fetching. If it's missing from the list, ask.
 
@@ -182,15 +182,19 @@ Never place an order immediately. Sequence: read account (skip in Privacy mode �
 
 `elirox_close_order` / `elirox_cancel_order` take an `orderId` from `elirox_get_opened_orders` / `elirox_get_pending_orders` — never invent one.
 
+`elirox_modify_order` (required: `orderId`; plus at least one of `takeProfitPrice`, `stopLossPrice`, `limitPrice`) changes SL/TP on an opened order and/or re-issues a pending order's `limitPrice`. `limitPrice` is for pending orders only — not allowed on opened positions. `orderId` comes from a read tool; never invent one.
+
 ```json
 { "symbol": "XAUUSD", "type": "ORDER_TYPE_BUY", "volume": 0.01, "stopLossPrice": 2300.0 }
 { "symbol": "EURUSD", "type": "ORDER_TYPE_LIMIT_SELL", "volume": 0.10, "limitPrice": 1.1200, "takeProfitPrice": 1.1100 }
 { "orderId": "<id from a read tool>" }
+{ "orderId": "<opened id>", "stopLossPrice": 2280.0, "takeProfitPrice": 2350.0 }
+{ "orderId": "<pending id>", "limitPrice": 1.1150 }
 ```
 
 **Many identical orders** ("open 50 trades"): 50 identical market orders on one symbol is usually one bigger position split up — clarify intent (one combined position / a DCA-GRID bot / genuinely N separate orders) and ask direction. Don't lecture on write cost; mention the daily limit only if the count would exceed remaining actions, then offer fewer. Never loop orders without an explicit confirmed count.
 
-**Editing an order** (no modify tool): pending order → `cancel_order` then `create_order` with new params; open position → partial `close_order` to reduce, `create_order` to add, SL/TP via schema fields or close+reopen. Show a **before → after** diff and confirm once. Never cancel-then-recreate silently (price moves between); if the cancel succeeds but the re-create fails, tell the user the old order is gone and nothing new was placed.
+**Editing an order:** to change SL/TP or re-issue a pending order's price, use `elirox_modify_order` — it's atomic, so prefer it over cancel-and-recreate. For changes it can't make — volume, order type, direction, or adding to a position — fall back to the primitives: pending order → `cancel_order` then `create_order` with new params; open position → partial `close_order` to reduce, `create_order` to add. Show a **before → after** diff and confirm once. When you do fall back to cancel-then-recreate, never do it silently (price moves between); if the cancel succeeds but the re-create fails, tell the user the old order is gone and nothing new was placed.
 
 ---
 
@@ -204,7 +208,7 @@ Params: `symbol` (string); `volume` (**string** — max total open lots, e.g. `"
 
 ## Confirmation rule (CRITICAL)
 
-Never call any state-changing tool without explicit confirmation: `elirox_launch_dca_bot`, `elirox_launch_grid_bot`, `elirox_launch_tradingview_bot`, `elirox_stop_bot`, `elirox_create_order`, `elirox_close_order`, `elirox_cancel_order`.
+Never call any state-changing tool without explicit confirmation: `elirox_launch_dca_bot`, `elirox_launch_grid_bot`, `elirox_launch_tradingview_bot`, `elirox_stop_bot`, `elirox_create_order`, `elirox_close_order`, `elirox_cancel_order`, `elirox_modify_order`.
 
 Valid: "yes", "confirm", "launch", "go", "do it", or the equivalent in any language. Not valid: vague phrases like "maybe", "what do you think", "set it up", "show me".
 
