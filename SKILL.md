@@ -178,17 +178,22 @@ Never place an order immediately. Sequence: read account (skip in Privacy mode �
 `elirox_create_order` (required: `symbol`, `type`, `volume`; live schema wins if it ever differs):
 - `type` — `ORDER_TYPE_BUY` / `ORDER_TYPE_SELL` (market) or `ORDER_TYPE_LIMIT_BUY` / `ORDER_TYPE_LIMIT_SELL` (limit)
 - `volume` — number, lots, > 0
-- `limitPrice` — required for the LIMIT types; `takeProfitPrice` / `stopLossPrice` — optional
+- `limitPrice` — required for the LIMIT types; `takeProfitPrice` / `stopLossPrice` — optional, and omitting one (or passing `0`) places the order without that level
 
 `elirox_close_order` / `elirox_cancel_order` take an `orderId` from `elirox_get_opened_orders` / `elirox_get_pending_orders` — never invent one.
 
 `elirox_modify_order` (required: `orderId`; plus at least one of `takeProfitPrice`, `stopLossPrice`, `limitPrice`) changes SL/TP on an opened order and/or re-issues a pending order's `limitPrice`. `limitPrice` is for pending orders only — not allowed on opened positions. `orderId` comes from a read tool; never invent one.
+
+**Removing an SL/TP:** pass `0` — `takeProfitPrice: 0` clears the level instead of setting a price of `0`, and a cleared level is then absent from the returned order (don't read that as data loss). `null` is rejected, so use `0`. And since `0` is never a valid price, if a user names `0` as the price they want, treat it as a mistake and ask.
+
+**Where levels may sit** (same rules for `elirox_create_order` and `elirox_modify_order`): a rejected call is usually a misplaced level, not a broken tool. TP goes above the reference price for a buy and below it for a sell; SL is the mirror. The reference is the current price for a market/opened order and the limit price for a limit/pending one — so on an opened position both levels are judged against the market *now*, not against your entry (moving an SL up to breakeven on a profitable buy is fine, as long as it stays below the market). Each level also needs a gap of at least `minDeviationInPips × pipSize` (both on the asset from `elirox_get_assets`) from that reference; a level right at the reference is rejected. A buy `limitPrice` stays below the market and a sell `limitPrice` above it, on both create and re-issue. When a level is rejected, quote the returned `field`/`details` and offer a price that satisfies the gap rather than retrying the same value.
 
 ```json
 { "symbol": "XAUUSD", "type": "ORDER_TYPE_BUY", "volume": 0.01, "stopLossPrice": 2300.0 }
 { "symbol": "EURUSD", "type": "ORDER_TYPE_LIMIT_SELL", "volume": 0.10, "limitPrice": 1.1200, "takeProfitPrice": 1.1100 }
 { "orderId": "<id from a read tool>" }
 { "orderId": "<opened id>", "stopLossPrice": 2280.0, "takeProfitPrice": 2350.0 }
+{ "orderId": "<opened id>", "takeProfitPrice": 0 }
 { "orderId": "<pending id>", "limitPrice": 1.1150 }
 ```
 
