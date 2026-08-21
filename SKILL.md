@@ -159,14 +159,20 @@ If already on **Pro**, say it's the top plan and they can contact Elirox support
 Never launch immediately. Sequence:
 
 1. Read account (skip in Privacy mode — ask the amount instead) → `elirox_get_limits` → resolve symbol via `elirox_get_assets`.
-2. Ask for missing params: strategy (DCA / GRID); direction (LONG / SHORT; GRID also REVERSAL); amount + unit (`ACCOUNT_CURRENCY` or `LOTS`); preset type (conservative / optimal / aggressive). For a recommendation use `preset:"ai"`, `presetType:"conservative"`.
-3. Show the summary: balance & available funds, symbol/strategy/direction, budget + unit, preset, entry mode (DCA only), and one short risk line (see **Risk warning**).
+2. Ask for missing params: strategy (DCA / GRID); amount + unit (`ACCOUNT_CURRENCY` or `LOTS`); preset type (conservative / optimal / aggressive — recommend `presetType:"conservative"`). Direction depends on the strategy: DCA takes `LONG` / `SHORT`, plus `AUTO` (the bot picks the side from the TradingView Summary signal each cycle) on assets that list `TRADINGVIEW_SUMMARY` in `supportedEntryConditions`; GRID trades both sides of the grid, so `REVERSAL` is its only value — don't ask for it, just pass it.
+3. Show the summary: balance & available funds, symbol/strategy/direction, budget + unit, preset type, entry mode (DCA only), and one short risk line (see **Risk warning**).
 4. Confirm (see **Confirmation rule**), then call the launch tool.
 
-DCA params (GRID = the same **without** `entryMode`):
+DCA params:
 
 ```json
-{ "symbol": "EURUSD", "direction": "LONG", "budget": { "value": "100", "unit": "ACCOUNT_CURRENCY" }, "preset": "ai", "presetType": "conservative", "entryMode": "ASAP" }
+{ "symbol": "EURUSD", "direction": "LONG", "budget": { "value": "100", "unit": "ACCOUNT_CURRENCY" }, "presetType": "conservative", "entryMode": "ASAP" }
+```
+
+GRID params — no `entryMode`, and `direction` is always `REVERSAL`:
+
+```json
+{ "symbol": "EURUSD", "direction": "REVERSAL", "budget": { "value": "100", "unit": "ACCOUNT_CURRENCY" }, "presetType": "conservative" }
 ```
 
 ---
