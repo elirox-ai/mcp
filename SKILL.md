@@ -160,7 +160,7 @@ Never launch immediately. Sequence:
 
 1. Read account (skip in Privacy mode — ask the amount instead) → `elirox_get_limits` → resolve symbol via `elirox_get_assets`.
 2. Ask for missing params: strategy (DCA / GRID); amount + unit (`ACCOUNT_CURRENCY` or `LOTS`); preset type (conservative / optimal / aggressive — recommend `presetType:"conservative"`). Direction depends on the strategy: DCA takes `LONG` / `SHORT`, plus `AUTO` (the bot picks the side from the TradingView Summary signal each cycle) on assets that list `TRADINGVIEW_SUMMARY` in `supportedEntryConditions`; GRID trades both sides of the grid, so `REVERSAL` is its only value — don't ask for it, just pass it.
-3. Show the summary: balance & available funds, symbol/strategy/direction, budget + unit, preset type, entry mode (DCA only), and one short risk line (see **Risk warning**).
+3. Show the summary: balance & available funds, symbol/strategy/direction, budget + unit, preset type, entry mode (DCA only), any optional extras in play (trailing stop, grid rotation, pause filters), and one short risk line (see **Risk warning**).
 4. Confirm (see **Confirmation rule**), then call the launch tool.
 
 DCA params:
@@ -173,6 +173,21 @@ GRID params — no `entryMode`, and `direction` is always `REVERSAL`:
 
 ```json
 { "symbol": "EURUSD", "direction": "REVERSAL", "budget": { "value": "100", "unit": "ACCOUNT_CURRENCY" }, "presetType": "conservative" }
+```
+
+Everything below is optional — offer it when it fits what the user asked for, never assume it.
+
+**Both strategies — `pauseSettings`:** one element per source, each `{ "reason", "enabled", "beforeEventMinutes", "afterEventMinutes" }` with all four fields present and `reason` one of `NEWS_HIGH` / `NEWS_MEDIUM` / `SESSION_END`. A pause blocks new orders and closes the position while it's profitable.
+
+**GRID — `dynamicGridEnabled`** (boolean, default `true`): when the cycle profit reaches the rotation threshold, the position is closed and the grid is re-entered from the current price. Pass `false` only if the user explicitly wants a static grid.
+
+**DCA — webhook entry:** `entryMode: "TRADINGVIEW_WEBHOOK"` makes the bot wait for a TradingView alert instead of entering right away. Call `elirox_get_tradingview_webhook` with type `SIGNAL` (the default — *not* `CONTROL`, that one is for the TradingView Strategy bot), pass the returned `id` as `tvWebhookID`, and tell the user to paste the returned `url` into their TradingView alert. The direction stays fixed, so `AUTO` is rejected with webhook entry.
+
+**DCA — `dcaSettings.risk.trailingStopDistance`** `{ "value", "unit" }`: a trailing stop that **replaces the static TP** — the preset's TP price becomes the activation point, and from there the position is trailed by this distance. `"PERCENTS"` takes a decimal fraction (`0.01` = 1%, allowed `0.001`–`0.2`); `"PIPS"` takes a pip count (≥ 1 and ≤ `0.2 × lastPrice / pipSize`). Say plainly that the fixed TP goes away before confirming.
+
+```json
+{ "symbol": "EURUSD", "direction": "LONG", "budget": { "value": "100", "unit": "ACCOUNT_CURRENCY" }, "presetType": "conservative", "entryMode": "TRADINGVIEW_WEBHOOK", "tvWebhookID": "<SIGNAL webhook id>", "dcaSettings": { "risk": { "trailingStopDistance": { "value": 0.01, "unit": "PERCENTS" } } } }
+{ "symbol": "EURUSD", "direction": "REVERSAL", "budget": { "value": "0.05", "unit": "LOTS" }, "presetType": "optimal", "dynamicGridEnabled": false, "pauseSettings": [{ "reason": "NEWS_HIGH", "enabled": true, "beforeEventMinutes": 30, "afterEventMinutes": 30 }] }
 ```
 
 ---
