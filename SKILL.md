@@ -150,6 +150,8 @@ If already on **Pro**, say it's the top plan and they can contact Elirox support
 
 **State-changing (all require confirmation):** `elirox_launch_dca_bot`, `elirox_launch_grid_bot`, `elirox_launch_tradingview_bot`, `elirox_stop_bot`, `elirox_create_order`, `elirox_close_order` (`orderId`), `elirox_cancel_order` (`orderId`), `elirox_modify_order` (`orderId` + at least one of `takeProfitPrice` / `stopLossPrice` / `limitPrice`). Use `elirox_modify_order` to change SL/TP on an open position or re-issue a pending order's price — `limitPrice` is pending-orders-only (see **Opening / closing a trade**).
 
+**Manual trades only — robot orders are out of scope.** The six order tools — `elirox_create_order`, `elirox_close_order`, `elirox_cancel_order`, `elirox_modify_order`, `elirox_get_opened_orders`, `elirox_get_pending_orders` — see **only** orders placed manually through the terminal (including the ones you place here). A robot places its orders separately, on its own side, and they are invisible to these tools: the read tools never list them, and a robot's order id passed to a write tool comes back as "order not found". So never answer "what does my bot hold / close my bot's position" with these tools, never present the manual-order list as the robot's positions, and never conclude "you have no open trades" from an empty list — a robot may well be holding a position at that moment. For robots use `elirox_get_active_bots` to see them and `elirox_stop_bot` to close one out.
+
 **Symbols:** map an informal name to a broker id via `elirox_get_assets`. Never invent an id; if the match is ambiguous, list the colliding ids and ask. Use an exact id the user already gave without re-fetching. If it's missing from the list, ask.
 
 ---
@@ -162,6 +164,8 @@ Never launch immediately. Sequence:
 2. Ask for missing params: strategy (DCA / GRID); amount + unit (`ACCOUNT_CURRENCY` or `LOTS`); preset type (conservative / optimal / aggressive — recommend `presetType:"conservative"`). Direction depends on the strategy: DCA takes `LONG` / `SHORT`, plus `AUTO` (the bot picks the side from the TradingView Summary signal each cycle) on assets that list `TRADINGVIEW_SUMMARY` in `supportedEntryConditions`; GRID trades both sides of the grid, so `REVERSAL` is its only value — don't ask for it, just pass it.
 3. Show the summary: balance & available funds, symbol/strategy/direction, budget + unit, preset type, entry mode (DCA only), any optional extras in play (trailing stop, grid rotation, pause filters), and one short risk line (see **Risk warning**).
 4. Confirm (see **Confirmation rule**), then call the launch tool.
+
+A launched bot places and manages its own orders — they don't show up in `elirox_get_opened_orders` / `elirox_get_pending_orders` and can't be closed, cancelled or modified with the order tools. Follow it with `elirox_get_active_bots`; to close its position, stop the bot with `elirox_stop_bot`.
 
 DCA params:
 
@@ -193,6 +197,8 @@ Everything below is optional — offer it when it fits what the user asked for, 
 ---
 
 ## Opening / closing a trade
+
+This whole section is about **manual** trades — orders you place and manage directly. It never reaches a robot's orders (see **Tools**).
 
 Never place an order immediately. Sequence: read account (skip in Privacy mode — ask the amount) → resolve symbol → optionally `elirox_get_last_price` to show the price → gather params → show the summary (symbol, side, volume, order type, price/limit, SL/TP, and one short risk line — see **Risk warning**) → confirm → `elirox_create_order` / `elirox_close_order` / `elirox_cancel_order`.
 
