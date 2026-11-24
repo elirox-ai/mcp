@@ -64,7 +64,7 @@ args = ["-y", "mcp-remote", "https://app.elxapi.com/public/v1/mcp", "--header", 
 
 ## Tools
 
-The `elirox-mcp` MCP server exposes read tools (account, active bots, assets, limits, last price,
+The `elirox-mcp` MCP server exposes read tools (account, active bots, assets, asset spec, limits, last price,
 TradingView webhook, opened/pending orders) and state-changing tools (launch DCA / GRID / TradingView
 bots, stop a bot, create / modify / close / cancel orders). **Every state-changing tool requires an
 explicit confirmation.** See [`SKILL.md`](./SKILL.md) for the full reference, parameters, and flows.
